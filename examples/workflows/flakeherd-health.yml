@@ -1,0 +1,60 @@
+# Example: generate the FlakeHerd Test Health badge in CI.
+#
+# This workflow computes the health metric from the JSON report produced by
+# `flakeherd record --json-out` and renders a small SVG badge locally. The
+# badge is uploaded as a workflow artifact - deliberately NOT pushed to any
+# branch. Committing the badge to your repository (or pushing it to a
+# dedicated branch) is an explicit, separate decision: see
+# docs/BADGE_WORKFLOW.md for a secure optional recipe and the reasoning.
+#
+# Security notes:
+#   * contents: read is sufficient - nothing here writes to the repository.
+#   * checkout with persist-credentials: false so test code can never read
+#     Git credentials from the checkout.
+#   * no secrets are used or exposed.
+name: Test Health badge
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Install flakeherd
+        run: python -m pip install --no-deps "$GITHUB_WORKSPACE"
+
+      - name: Run tests with a JUnit report
+        run: python -m pytest --junitxml=junit.xml -q || true
+
+      - name: Record and compute health
+        run: |
+          python -m flakeherd record --junit 'junit.xml' \
+            --sha "$GITHUB_SHA" \
+            --json-out report.json \
+            --no-report || true
+          python -m flakeherd health --report report.json \
+            --badge test-health.svg \
+            --json-out health.json
+
+      - name: Upload badge as an artifact
+        uses: actions/upload-artifact@v5.0.0
+        with:
+          name: test-health-badge
+          path: |
+            test-health.svg
+            health.json
+          if-no-files-found: warn

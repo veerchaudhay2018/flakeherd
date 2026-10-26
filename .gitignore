@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.venv/
+venv/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# FlakeHerd local state (never commit to the default branch;
+# history is synced to the dedicated cache branch instead)
+.flakeherd/
+*.db
+*.db-wal
+*.db-shm
+
+# Demo / CI scratch artifacts
+demo/demo-project/.pytest_cache/
+demo/demo-project/results/
+demo/demo-project/.flakeherd/
+results/
+junit*.xml
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Secrets and local credentials
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# Local secret/config files
+secrets/
+
+# Local generated reports
+report.json
+
+# Ignore badge until meaningful history is available
+test-health.svg

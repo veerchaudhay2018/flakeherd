@@ -1,0 +1,117 @@
+name: 'FlakeHerd'
+description: >-
+  History-aware flaky-test detection and quarantine for GitHub Actions.
+  Records per-test outcomes from JUnit XML across CI runs, classifies each
+  test (confirmed flaky, regression, broken, fixed...), and annotates the
+  failing code lines. History lives in a cache branch inside your own
+  repository - no servers, no accounts, no telemetry.
+author: 'FlakeHerd contributors'
+
+branding:
+  icon: 'alert-circle'
+  color: 'yellow'
+
+inputs:
+  junit-glob:
+    description: >-
+      Glob of JUnit XML report file(s) produced by your test job(s),
+      relative to the workspace. Supports ** for recursive matching.
+    required: false
+    default: '**/junit*.xml'
+  fail-on:
+    description: >-
+      Gate policy: 'unexplained' fails the job when currently-failing
+      tests have no flakiness evidence in their history; 'never' only
+      reports.
+    required: false
+    default: 'unexplained'
+  window:
+    description: How many recent outcomes per test to analyze.
+    required: false
+    default: '30'
+  history-branch:
+    description: >-
+      Branch used to persist the test-history database across runs.
+      Give trusted workflows `permissions: contents: write` and pass github-token.
+    required: false
+    default: 'flakeherd/history'
+  quarantine:
+    description: >-
+      If 'true', also write .flakeherd/quarantine.json listing proven-flaky
+      tests. Commit it (or copy it) to make the pytest plugin skip them.
+    required: false
+    default: 'false'
+  include-low-confidence:
+    description: If 'true', low-confidence flaky tests may be quarantined too.
+    required: false
+    default: 'false'
+  python-version:
+    description: Python version installed for the flakeherd CLI (>= 3.9).
+    required: false
+    default: '3.12'
+  github-token:
+    description: >-
+      Optional token used only by the history pull/push steps. Set checkout's
+      persist-credentials to false so test processes cannot read persisted Git credentials.
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Python
+      uses: actions/setup-python@v6.3.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install flakeherd
+      # Installs straight from this action's own checkout - no PyPI needed.
+      env:
+        FLAKEHERD_ACTION_PATH: ${{ github.action_path }}
+      run: python -m pip install --no-deps --quiet "$FLAKEHERD_ACTION_PATH"
+      shell: bash
+
+    - name: Pull test history
+      # Best-effort: a missing branch (first run) or a network hiccup must
+      # never break a build.
+      env:
+        FLAKEHERD_HISTORY_BRANCH: ${{ inputs.history-branch }}
+        FLAKEHERD_GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: python -m flakeherd ci-sync --mode pull --history-branch "$FLAKEHERD_HISTORY_BRANCH"
+      shell: bash
+      continue-on-error: true
+
+    - name: Record results and report
+      # The gate step: this is the only step that may fail your job, and
+      # only when fail-on is 'unexplained'.
+      env:
+        FLAKEHERD_JUNIT_GLOB: ${{ inputs.junit-glob }}
+        FLAKEHERD_WINDOW: ${{ inputs.window }}
+        FLAKEHERD_FAIL_ON: ${{ inputs.fail-on }}
+      run: |
+        python -m flakeherd record \
+          --junit "$FLAKEHERD_JUNIT_GLOB" \
+          --window "$FLAKEHERD_WINDOW" \
+          --github on \
+          --fail-on "$FLAKEHERD_FAIL_ON"
+      shell: bash
+
+    - name: Write quarantine manifest
+      if: ${{ inputs.quarantine == 'true' }}
+      env:
+        FLAKEHERD_INCLUDE_LOW_CONFIDENCE: ${{ inputs.include-low-confidence }}
+      run: |
+        if [[ "$FLAKEHERD_INCLUDE_LOW_CONFIDENCE" == "true" ]]; then
+          python -m flakeherd quarantine --include-low-confidence
+        else
+          python -m flakeherd quarantine
+        fi
+      shell: bash
+
+    - name: Push test history
+      # Best-effort (see Pull step); requires contents: write permission.
+      env:
+        FLAKEHERD_HISTORY_BRANCH: ${{ inputs.history-branch }}
+        FLAKEHERD_GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: python -m flakeherd ci-sync --mode push --history-branch "$FLAKEHERD_HISTORY_BRANCH"
+      shell: bash
+      continue-on-error: true

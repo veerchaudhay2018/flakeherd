@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+      - name: Install ruff
+        run: python -m pip install ruff
+      - name: Lint
+        run: ruff check src tests
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . -r requirements-dev.txt
+      - name: Run tests
+        run: python -m pytest -q
+
+  demo:
+    name: End-to-end demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . -r requirements-dev.txt
+      - name: Run the full demo (simulation, live flaky run, cache-branch sync)
+        run: bash demo/run_demo.sh
+
+  action-schema:
+    name: Validate action + workflow YAML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+      - name: Parse YAML files
+        run: |
+          python - <<'PY'
+          import yaml, sys
+          files = ["action.yml", ".github/workflows/ci.yml", "docs/experimental/dogfood.yml"]
+          for f in files:
+              with open(f) as fh:
+                  yaml.safe_load(fh)
+              print(f"ok: {f}")
+          sys.exit(0)
+          PY

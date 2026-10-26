@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Real shape of jest-junit output (abridged). -->
+<testsuites name="jest tests" tests="3" failures="1" errors="0" skipped="0" time="0.811">
+  <testsuite name="tests/math.test.ts" errors="0" failures="1" skipped="0" timestamp="2026-10-01T12:00:00"
+             time="0.811" tests="3">
+    <testcase classname="tests/math.test.ts" name="adds two numbers" time="0.004"/>
+    <testcase classname="tests/math.test.ts" name="divides without remainder"
+              time="0.512">
+      <failure>expect(received).toBe(expected) // Object.is equality</failure>
+    </testcase>
+    <testcase classname="tests/math.test.ts" name="sorts a list" time="0.002"/>
+  </testsuite>
+</testsuites>

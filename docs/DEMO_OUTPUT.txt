@@ -1,0 +1,200 @@
+# FlakeHerd demo - recorded 2026-10-25T05:29:21Z
+# Reproduce with: bash demo/run_demo.sh (prerequisites: pip install -e . -r requirements-dev.txt)
+
+
+==============================================================
+== FlakeHerd demo - scratch dir: /tmp/flakeherd-demo-XXXXXX
+==============================================================
+
+==============================================================
+== PART A - deterministic history simulation (the taxonomy)
+==============================================================
+wrote 8 simulated CI reports to /tmp/flakeherd-demo-XXXXXX/part-a/
+run 3 and run 4 share commit-0003 (a failed run re-ran green).
+
+-- recording the 8 runs (like 8 CI jobs would) --
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-1, sha commit-0001)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-2, sha commit-0002)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-3, sha commit-0003)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-4, sha commit-0003)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-5, sha commit-0005)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-6, sha commit-0006)
+flakeherd: recorded 8 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-7, sha commit-0007)
+
+-- recording run 8 and printing the report --
+flakeherd: recorded 9 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-8, sha commit-0008)
+FlakeHerd report
+  database : .flakeherd/history.db (8 runs, 9 tests)
+  run      : ci-run-8
+
+  classes  : broken=1  regression=1  confirmed flaky=2  flaky (low conf.)=1  fixed=1  new=1  skip-only=1  stable-pass=1
+
+CLASS              TEST                                              N   FAIL%  SCORE  RECENT
+---------------------------------------------------------------------------------------------
+broken             upload.UploadTest::test_multipart_resume          8  100.0%     20  FFFFFFFF
+regression         api.RateLimitTest::test_rate_limit_headers        8   50.0%     11  PPPPFFFF
+confirmed flaky    search.SearchTest::test_autocomplete              8   37.5%     86  PFPFPFPP
+confirmed flaky    payment.RetryTest::test_retry_on_timeout          8   12.5%     75  PPFPPPPP
+flaky (low conf.)  flags.FlagTest::test_experiment_ratios            8   25.0%     43  PPFFPPPP
+fixed              cache.EvictionTest::test_eviction_order           8   50.0%     26  FFFFPPPP
+new                widgets.WidgetTest::test_new_widget               1    0.0%      0  P
+skip-only          experimental.ProbeTest::test_probe                8    0.0%      0  ........
+
+  (1 stable-pass test(s) not shown)
+
+GATE: unexplained failures in this run (2 test(s) failed without flaky evidence):
+  ! upload.UploadTest::test_multipart_resume [broken]
+  ! api.RateLimitTest::test_rate_limit_headers [regression]
+  These tests are NOT excused by flaky history; the job should fail.
+
+Quarantine candidates (proven flaky):
+  * search.SearchTest::test_autocomplete (score 86) - commit commit-000 produced both a pass and a fail (re-run divergence)
+  * payment.RetryTest::test_retry_on_timeout (score 75) - commit commit-000 produced both a pass and a fail (re-run divergence)
+  * flags.FlagTest::test_experiment_ratios (score 43) - 2 transitions - one-off flake or break-then-fix (needs more evidence)
+Run `flakeherd quarantine` to generate a skip manifest.
+
+==============================================================
+== PART B - real pytest suite with a genuinely flaky test
+==============================================================
+
+-- running the real suite 8 times (DEMO_RUN seeds a deterministic flake; runs 3 and 4 share a commit) --
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-1, sha commit-1)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-2, sha commit-2)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-3, sha feature-reru)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-4, sha feature-reru)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-5, sha commit-5)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-6, sha commit-6)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-7, sha commit-7)
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run pytest-run-8, sha commit-8)
+
+-- what FlakeHerd knows after 8 real runs --
+FlakeHerd report
+  database : .flakeherd/history.db (8 runs, 3 tests)
+  run      : pytest-run-8
+
+  classes  : confirmed flaky=1  stable-pass=2
+
+CLASS              TEST                                              N   FAIL%  SCORE  RECENT
+---------------------------------------------------------------------------------------------
+confirmed flaky    demo.demo-project.test_app::test_flaky_network    8   25.0%     81  PPFPFPPP
+
+  (2 stable-pass test(s) not shown)
+
+Quarantine candidates (proven flaky):
+  * demo.demo-project.test_app::test_flaky_network (score 81) - commit feature-re produced both a pass and a fail (re-run divergence)
+Run `flakeherd quarantine` to generate a skip manifest.
+
+-- writing the quarantine manifest --
+wrote 1 quarantined test(s) -> .flakeherd/quarantine.json
+  - demo.demo-project.test_app::test_flaky_network  [confirmed flaky, score 81]
+      audit: score 81 >= 0; class confirmed-flaky; policy=legacy
+pytest picks up .flakeherd/quarantine.json automatically once flakeherd is installed; other runners can read the same manifest.
+the manifest is a file in your working tree - committing it is your decision (flakeherd never runs git write commands for it).
+
+-- running the suite once more - the quarantined test now SKIPS with a reason --
+..s                                                                      [100%]
+
+==============================================================
+== PART C - auto-retry with preserved evidence + test health badge
+==============================================================
+
+-- running the retry demo suite with --flakeherd-retries 1 (one extra attempt per failure) --
+
+-- what the JUnit XML recorded (retry evidence: per-attempt outcomes + first failure) --
+  demo.retry-project.test_retry_app::test_transient_network
+    attempts : 2
+    outcomes : F,P
+    1st fail : def test_transient_network(): count = _execution_counts.get(...
+  demo.retry-project.test_retry_app::test_permanently_broken
+    attempts : 2
+    outcomes : F,F
+    1st fail : def test_permanently_broken(): > assert False, "simulated ge...
+
+-- recording five runs with the same retry pattern (a recovered test never gates; a test failing every attempt stays a failure) --
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run retry-run-1, sha retry-demo-s)
+flakeherd: wrote JSON report -> report.json
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run retry-run-2, sha retry-demo-s)
+flakeherd: wrote JSON report -> report.json
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run retry-run-3, sha retry-demo-s)
+flakeherd: wrote JSON report -> report.json
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run retry-run-4, sha retry-demo-s)
+flakeherd: wrote JSON report -> report.json
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run retry-run-5, sha retry-demo-s)
+flakeherd: wrote JSON report -> report.json
+  classes  : broken=1  flaky=1  stable-pass=1
+broken             demo.retry-project.test_retry_app::test_per...    5  100.0%     20  FFFFF  (retried: F,F)
+flaky              demo.retry-project.test_retry_app::test_tra...    5   50.0%     80  PPPPP  (retried: F,P)
+
+-- enabling the quarantine policy (threshold 40, min 5 samples) - suggestion mode --
+demo.retry-project.test_retry_app::test_transient_network  [flaky, score 80]  9 pass/fail transitions in the last 5 runs
+  audit: score 80 >= 40; class flaky; samples 5 >= 5; policy=threshold
+  expires: 2026-11-24
+
+-- computing the Test Health metric and rendering the badge locally --
+flakeherd: wrote health summary -> health.json
+flakeherd: wrote health badge -> test-health.svg
+FlakeHerd test health
+  state    : ok
+  score    : 33/100  (heuristic, not a probability)
+  samples  : 5 run(s), 3 scored test(s) of 3 total
+  metric   : version 1, generated 2026-10-25T05:29:21.128181+00:00
+  classes  : broken=1, flaky=1, stable-pass=1
+  badge    : test-health.svg (rendered locally; commit it or fetch it from CI artifacts - there is no public badge URL)
+badge (first 2 lines):
+<svg xmlns="http://www.w3.org/2000/svg" width="99" height="20" role="img" aria-label="Test health: 33 of 100 (heuristic)">
+  <title>Test health: 33/100 - heuristic indicator, not a statistical probability</title>
+
+-- insufficient-data handling: a fresh database with one run --
+flakeherd: recorded 3 test(s) from 1 file(s) -> .flakeherd/history.db (run only-run, sha empty-sha)
+flakeherd: wrote JSON report -> report.json
+flakeherd: wrote health badge -> no-data.svg
+FlakeHerd test health
+  state    : insufficient-data
+  score    : n/a (insufficient data - 1 run(s) recorded, 5 required)
+  samples  : 1 run(s), 1 scored test(s) of 3 total
+  metric   : version 1, generated 2026-10-25T05:29:21.280536+00:00
+  classes  : new=2, suspected-flaky=1
+  badge    : no-data.svg (rendered locally; commit it or fetch it from CI artifacts - there is no public badge URL)
+badge (first 2 lines):
+<svg xmlns="http://www.w3.org/2000/svg" width="106" height="20" role="img" aria-label="Test health: insufficient data">
+  <title>Test health: insufficient data - heuristic indicator, not a statistical probability</title>
+
+==============================================================
+== PART D - history sync over a cache branch (two CI runners)
+==============================================================
+
+-- creating a bare origin and a first checkout (runner 1) --
+Initialized empty Git repository in /tmp/flakeherd-demo-XXXXXX/part-d/origin.git/
+
+-- runner 1 records its results and pushes history to the cache branch --
+flakeherd: recorded 2 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-1, sha run1-sha)
+flakeherd: created origin/flakeherd/history at 1a3967008822
+
+-- runner 2 = a completely fresh clone; it pulls the shared history first --
+flakeherd: merged 1 run(s), 2 outcome(s) from origin/flakeherd/history
+
+-- runner 2 records its own results and pushes; both histories merge on the branch --
+flakeherd: recorded 1 test(s) from 1 file(s) -> .flakeherd/history.db (run ci-run-2, sha run2-sha)
+flakeherd: updated origin/flakeherd/history at 4c23032ecbb8
+
+-- the cache branch contains both runners' runs --
+4c23032ecbb8f5eabcdb48a66b0e385c9350dfae	refs/heads/flakeherd/history
+4c23032 flakeherd: update test history (2026-10-25T05:29:21.761768+00:00)
+1a39670 flakeherd: update test history (2026-10-25T05:29:21.462266+00:00)
+
+-- runner 2's report now sees the combined history of both runners --
+FlakeHerd report
+  database : .flakeherd/history.db (2 runs, 2 tests)
+  run      : ci-run-2
+
+  classes  : new=1  stable-pass=1
+
+CLASS              TEST                                              N   FAIL%  SCORE  RECENT
+---------------------------------------------------------------------------------------------
+new                app.CalcTest::test_div                            1    0.0%      0  P
+
+  (1 stable-pass test(s) not shown)
+
+==============================================================
+== Demo complete - scratch dir kept at: /tmp/flakeherd-demo-XXXXXX (delete at will)
+==============================================================

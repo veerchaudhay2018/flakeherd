@@ -1,0 +1,54 @@
+# Example: add FlakeHerd to an existing test job.
+#
+# Place this workflow (or merge the "Analyze flakiness" step into your own
+# test job) at .github/workflows/tests.yml in your repository.
+#
+# Requirements:
+#   * your test step produces a JUnit XML report (pytest --junitxml, jest-junit,
+#     go-junit-report, Maven Surefire, ...)
+#   * `permissions: contents: write` so the history branch can be pushed
+#     (GitHub automatically downgrades the token to read-only for fork
+#     pull requests, so external contributors cannot write history; their
+#     push step is skipped by the action's best-effort design)
+#   * checkout with `persist-credentials: false` and a `github-token` input
+#     so the sync token lives only in FlakeHerd's pull/push steps, never in
+#     the Git config your test code could read. If this job executes code
+#     you do not trust (e.g. plugins built from PR content), drop the
+#     permission to `contents: read` and remove the token instead.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: write  # history-branch push only; see comment above
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+
+      # Your normal test steps. pytest writes junit.xml; `|| true` keeps the
+      # job alive so FlakeHerd can triage the failures with history.
+      - name: Run tests
+        run: python -m pytest --junitxml=junit.xml -q || true
+
+      # Replace `you/flakeherd` with the real repository coordinates once
+      # published; before that, use `uses: <owner>/flakeherd@main`.
+      - name: Analyze flakiness
+        uses: you/flakeherd@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          junit-glob: 'junit.xml'
+          fail-on: 'unexplained'   # only unexplained failures fail the job
+          history-branch: 'flakeherd/history'
+          quarantine: 'true'       # writes .flakeherd/quarantine.json

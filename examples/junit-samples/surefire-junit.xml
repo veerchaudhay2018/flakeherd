@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Real shape of Maven Surefire output (abridged). -->
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           name="com.acme.PaymentRetryTest"
+           time="2.356" tests="2" errors="0" skipped="0" failures="1">
+  <testcase name="testRetryOnTimeout" classname="com.acme.PaymentRetryTest" time="1.204"/>
+  <testcase name="testBackoffJitter" classname="com.acme.PaymentRetryTest" time="1.152">
+    <failure message="expected:&lt;0.5&gt; but was:&lt;0.99&gt;"
+             type="java.lang.AssertionError">java.lang.AssertionError: expected:&lt;0.5&gt; but was:&lt;0.99&gt;
+        at com.acme.PaymentRetryTest.testBackoffJitter(PaymentRetryTest.java:57)
+    </failure>
+  </testcase>
+</testsuite>

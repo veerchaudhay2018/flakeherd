@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Real shape of go-junit-report output (abridged). -->
+<testsuites name="go tests" tests="2" failures="1" time="4.2">
+  <testsuite name="github.com/acme/pkg/retry" tests="2" failures="1" id="0" time="4.2">
+    <testcase name="TestRetryUntilSuccess" classname="github.com/acme/pkg/retry" time="1.2"/>
+    <testcase name="TestBackoffJitter" classname="github.com/acme/pkg/retry" time="3.0">
+      <failure message="jitter outside bounds">--- FAIL: TestBackoffJitter (3.00s)
+    retry_test.go:88: jitter = 0.99, want &lt; 0.5</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

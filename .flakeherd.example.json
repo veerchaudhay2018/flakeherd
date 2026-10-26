@@ -1,0 +1,13 @@
+{
+  "window": 30,
+  "max_runs": 500,
+  "min_regression_streak": 2,
+  "max_annotations": 10,
+  "quarantine_min_score": 0,
+  "include_low_confidence": false,
+  "ignore": [],
+  "quarantine_threshold_enabled": false,
+  "quarantine_score_threshold": 40,
+  "quarantine_min_samples": 5,
+  "quarantine_expiry_days": 0
+}

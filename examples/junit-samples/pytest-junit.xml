@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Real shape of the junitxml output of pytest (abridged). -->
+<testsuites name="pytest" tests="3" failures="1" errors="0" skipped="1">
+  <testsuite name="pytest" message="test failed" tests="3" failures="1" errors="0" skipped="1">
+    <testcase classname="tests.test_payment.RetryTest" name="test_retry_on_timeout"
+              file="tests/test_payment.py" line="42" time="3.141"/>
+    <testcase classname="tests.test_payment.RetryTest" name="test_retry_on_timeout"
+              file="tests/test_payment.py" line="42" time="3.141">
+      <failure message="AssertionError: retry budget exhausted">Traceback (most recent call last):
+  File "tests/test_payment.py", line 44, in test_retry_on_timeout
+    assert client.paid
+AssertionError: retry budget exhausted</failure>
+    </testcase>
+    <testcase classname="tests.test_experimental.ProbeTest" name="test_probe"
+              file="tests/test_experimental.py" line="7" time="0.001">
+      <skipped type="pytest.skip" message="behind a feature flag">/tests/conftest.py:12: skipped</skipped>
+    </testcase>
+  </testsuite>
+</testsuites>

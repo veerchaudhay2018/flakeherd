@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="470" viewBox="0 0 960 470" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace">
+  <!-- FlakeHerd data flow: one CI run, and how history accumulates in-repo. -->
+  <style>
+    .box { fill: #f6f8fa; stroke: #d0d7de; rx: 8; }
+    .core { fill: #fff8e6; stroke: #e3b341; stroke-width: 1.5; }
+    .storebox { fill: #eef6ff; stroke: #4a90d9; stroke-width: 1.5; }
+    .out { fill: #ecf8f0; stroke: #3fb950; stroke-width: 1.5; }
+    .t { font-size: 15px; fill: #1f2328; font-weight: bold; }
+    .s { font-size: 12px; fill: #57606a; }
+    .lab { font-size: 11px; fill: #57606a; font-weight: bold; letter-spacing: 1px; }
+    .arrow { stroke: #8b949e; stroke-width: 2; fill: none; marker-end: url(#head); }
+    .dash { stroke-dasharray: 6 4; }
+  </style>
+  <defs>
+    <marker id="head" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="30" class="lab">ONE CI RUN (GitHub Actions)</text>
+
+  <rect x="20" y="45" width="200" height="72" class="box"/>
+  <text x="32" y="70" class="t">test job</text>
+  <text x="32" y="90" class="s">pytest --junitxml / jest-junit</text>
+  <text x="32" y="104" class="s">go-junit-report / surefire ...</text>
+
+  <rect x="270" y="45" width="200" height="72" class="box"/>
+  <text x="282" y="70" class="t">JUnit XML report(s)</text>
+  <text x="282" y="90" class="s">pass / fail / skip per test</text>
+  <text x="282" y="104" class="s">file + line for annotations</text>
+
+  <rect x="520" y="45" width="200" height="72" class="core"/>
+  <text x="532" y="70" class="t">flakeherd record</text>
+  <text x="532" y="90" class="s">parse -&gt; dedupe -&gt; store + analyze</text>
+  <text x="532" y="104" class="s">classify every test (window N)</text>
+
+  <line x1="220" y1="81" x2="266" y2="81" class="arrow"/>
+  <line x1="470" y1="81" x2="516" y2="81" class="arrow"/>
+
+  <!-- outputs -->
+  <rect x="520" y="180" width="200" height="72" class="out"/>
+  <text x="532" y="205" class="t">reports</text>
+  <text x="532" y="225" class="s">::annotations + job summary</text>
+  <text x="532" y="239" class="s">terminal table + report.json</text>
+
+  <rect x="770" y="180" width="170" height="72" class="out"/>
+  <text x="782" y="205" class="t">quarantine</text>
+  <text x="782" y="225" class="s">.flakeherd/quarantine.json</text>
+  <text x="782" y="239" class="s">pytest plugin skips + reason</text>
+
+  <line x1="620" y1="117" x2="620" y2="176" class="arrow"/>
+
+  <!-- history branch -->
+  <text x="20" y="300" class="lab">ACROSS RUNS - HISTORY LIVES IN YOUR REPO (cache branch)</text>
+
+  <rect x="20" y="315" width="200" height="72" class="storebox"/>
+  <text x="32" y="340" class="t">SQLite history.db</text>
+  <text x="32" y="360" class="s">one row per test outcome</text>
+  <text x="32" y="374" class="s">commit sha + run id + status</text>
+
+  <rect x="300" y="315" width="240" height="72" class="storebox"/>
+  <text x="312" y="340" class="t">flakeherd/history (branch)</text>
+  <text x="312" y="360" class="s">ci-sync pull: merge rows (INSERT OR IGNORE)</text>
+  <text x="312" y="374" class="s">ci-sync push: one commit per run</text>
+
+  <rect x="620" y="315" width="320" height="72" class="storebox"/>
+  <text x="632" y="340" class="t">git, plain and boring</text>
+  <text x="632" y="360" class="s">inspect with git log / git diff</text>
+  <text x="632" y="374" class="s">revert with git revert - no server, no account</text>
+
+  <line x1="220" y1="351" x2="296" y2="351" class="arrow"/>
+  <line x1="540" y1="351" x2="616" y2="351" class="arrow"/>
+
+  <!-- vertical link: store feeds analysis -->
+  <line x1="620" y1="315" x2="620" y2="252" class="arrow dash" transform="rotate(180 620 283)"/>
+  <text x="632" y="283" class="s">every run classifies against accumulated history</text>
+
+  <text x="20" y="435" class="s">Data flow: test job -&gt; JUnit XML -&gt; flakeherd record -&gt; SQLite (pulled/pushed via the cache branch) -&gt; annotations, summary, gate, quarantine.</text>
+  <text x="20" y="453" class="s">Zero dependencies at runtime, zero network besides git push/pull to your own repository, zero telemetry.</text>
+</svg>
